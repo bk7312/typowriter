@@ -1,113 +1,179 @@
-import Image from 'next/image'
+"use client";
+
+import { ChangeEvent, useState, useRef, useEffect } from "react";
+import { data } from "../data/quotes.js";
+// data source: https://gist.github.com/JakubPetriska/060958fd744ca34f099e947cd080b540
+
+const getQuote = () => data[Math.floor(Math.random() * data.length)];
 
 export default function Home() {
+  const [game, setGame] = useState({
+    text: "Type as fast as you can, but not faster than the speed limit, else you'll get an auto-typo!",
+    cheat: false,
+    limit: 350,
+    isTyping: false,
+    isFinished: false,
+    start: 0,
+    end: 0,
+    cpm: 0,
+  });
+
+  const [typed, setTyped] = useState("");
+
+  const cheatRef = useRef<HTMLInputElement>(null);
+  const cpmRef = useRef<HTMLInputElement>(null);
+  const typedRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (typedRef.current) typedRef.current.focus();
+  }, []);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setGame((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleChangeTyped = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    if (!game.isTyping) {
+      setGame((prev) => ({
+        ...prev,
+        isTyping: true,
+        start: Date.now(),
+      }));
+      if (cheatRef.current) cheatRef.current.disabled = true;
+      if (cpmRef.current) cpmRef.current.disabled = true;
+    }
+
+    let val = e.currentTarget.value;
+    let end = Date.now();
+    const cpm = (60 * 1000 * val.length) / (end - game.start);
+    setGame((prev) => ({
+      ...prev,
+      end: end,
+      cpm: cpm,
+    }));
+
+    if (game.cheat) {
+      val = game.text.slice(0, val.length);
+    } else if (cpm > game.limit) {
+      if (
+        val.slice(-5) === game.text.slice(val.length - 5, val.length) &&
+        !val.slice(-3).includes(" ")
+      ) {
+        val = val.slice(0, -2) + val.at(-1) + val.at(-2);
+      }
+    }
+
+    setTyped(val);
+    if (val === game.text) {
+      e.currentTarget.disabled = true;
+      setGame((prev) => ({
+        ...prev,
+        isFinished: true,
+      }));
+    } else if (val === "") {
+      e.currentTarget.style.backgroundColor = "white";
+      setGame((prev) => ({
+        ...prev,
+        isTyping: false,
+        start: 0,
+        end: 0,
+        cpm: 0,
+      }));
+    } else if (val === game.text.slice(0, val.length)) {
+      e.currentTarget.style.backgroundColor = "lime";
+    } else {
+      e.currentTarget.style.backgroundColor = "coral";
+    }
+  };
+
+  const resetGame = () => {
+    setGame((prev) => ({
+      ...prev,
+      text: getQuote(),
+      isTyping: false,
+      isFinished: false,
+      start: 0,
+      end: 0,
+      cpm: 0,
+    }));
+    setTyped("");
+    if (typedRef.current) {
+      typedRef.current.disabled = false;
+      typedRef.current.style.backgroundColor = "white";
+    }
+    if (cheatRef.current) {
+      cheatRef.current.disabled = false;
+    }
+    if (cpmRef.current) {
+      cpmRef.current.disabled = false;
+    }
+    if (typedRef.current) typedRef.current.focus();
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+    <main className="flex min-h-screen flex-col items-center gap-4 p-8 max-w-xl mx-auto">
+      <h1 className="text-4xl">Typowriter</h1>
+      <h3 className="text-xl">The typing game with an auto-typo feature!</h3>
+      <p className="mt-4">Characters per minute: {Math.round(game.cpm)} CPM</p>
+      {game.isFinished ? (
+        <>
+          <p>
+            Averaged {game.cpm.toFixed(2)} CPM on a {game.limit} CPM auto-typo{" "}
+            {game.limit ? "(with 100% cheat cheat!)" : ""}
+          </p>
+          <p>Press &quot;Tab&quot; + &quot;Enter&quot; to play again.</p>
+        </>
+      ) : (
+        <p>Type the text below:</p>
+      )}
+      <p className="border rounded px-4 py-2 bg-white select-none w-full">
+        {game.text}
+      </p>
+      <textarea
+        className="px-4 py-2 w-full"
+        cols={45}
+        rows={5}
+        placeholder={game.text}
+        name="typed"
+        value={typed}
+        onChange={(e) => handleChangeTyped(e)}
+        ref={typedRef}
+      />
+      <label htmlFor="cheat" className="flex gap-2 items-center">
+        <input
+          type="checkbox"
+          name="cheat"
+          id="cheat"
+          checked={game.cheat}
+          onChange={(e) => handleChange(e)}
+          ref={cheatRef}
         />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+        Enable 100% accuracy cheat
+      </label>
+      <label htmlFor="limit" className="flex gap-2 items-center">
+        Auto-typo at:
+        <input
+          className="w-20"
+          type="number"
+          name="limit"
+          id="limit"
+          value={game.limit}
+          onChange={(e) => handleChange(e)}
+          ref={cpmRef}
+        />
+        CPM
+      </label>
+      <button
+        className="border px-4 py-2 rounded bg-blue-400"
+        name="reset"
+        onClick={() => resetGame()}
+      >
+        Reset
+      </button>
     </main>
-  )
+  );
 }

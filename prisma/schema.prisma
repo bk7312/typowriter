@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Texts {
+  id String @id @default(uuid())
+  text String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// to migrate, npx prisma migrate dev --name init
+
+// https://www.prisma.io/docs/guides/other/troubleshooting-orm/help-articles/nextjs-prisma-client-dev-practices
