@@ -5,6 +5,11 @@ import { data } from "../data/quotes.js";
 // data source: https://gist.github.com/JakubPetriska/060958fd744ca34f099e947cd080b540
 
 const getQuote = () => data[Math.floor(Math.random() * data.length)];
+const mixedChars =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const lowerChars = "abcdefghijklmnopqrstuvwxyz";
+const randomChar = (charSet: string) =>
+  charSet[Math.floor(Math.random() * charSet.length)];
 
 export default function Home() {
   const [game, setGame] = useState({
@@ -37,6 +42,22 @@ export default function Home() {
   };
 
   const handleChangeTyped = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    let val = e.currentTarget.value;
+    if (val === "") {
+      e.currentTarget.style.backgroundColor = "white";
+      setTyped(val);
+      setGame((prev) => ({
+        ...prev,
+        isTyping: false,
+        start: 0,
+        end: 0,
+        cpm: 0,
+      }));
+      if (cheatRef.current) cheatRef.current.disabled = false;
+      if (cpmRef.current) cpmRef.current.disabled = false;
+      return;
+    }
+
     if (!game.isTyping) {
       setGame((prev) => ({
         ...prev,
@@ -47,7 +68,6 @@ export default function Home() {
       if (cpmRef.current) cpmRef.current.disabled = true;
     }
 
-    let val = e.currentTarget.value;
     let end = Date.now();
     const cpm = (60 * 1000 * val.length) / (end - game.start);
     setGame((prev) => ({
@@ -63,7 +83,13 @@ export default function Home() {
         val.slice(-5) === game.text.slice(val.length - 5, val.length) &&
         !val.slice(-3).includes(" ")
       ) {
-        val = val.slice(0, -2) + val.at(-1) + val.at(-2);
+        if (cpm > 1.5 * game.limit) {
+          val = val.slice(0, -1) + randomChar(mixedChars);
+        } else if (cpm > 1.2 * game.limit) {
+          val = val.slice(0, -1) + randomChar(lowerChars);
+        } else {
+          val = val.slice(0, -2) + val.at(-1) + val.at(-2);
+        }
       }
     }
 
@@ -73,15 +99,6 @@ export default function Home() {
       setGame((prev) => ({
         ...prev,
         isFinished: true,
-      }));
-    } else if (val === "") {
-      e.currentTarget.style.backgroundColor = "white";
-      setGame((prev) => ({
-        ...prev,
-        isTyping: false,
-        start: 0,
-        end: 0,
-        cpm: 0,
       }));
     } else if (val === game.text.slice(0, val.length)) {
       e.currentTarget.style.backgroundColor = "lime";
@@ -118,12 +135,23 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center gap-4 p-8 max-w-xl mx-auto">
       <h1 className="text-4xl">Typowriter</h1>
       <h3 className="text-xl">The typing game with an auto-typo feature!</h3>
-      <p className="mt-4">Characters per minute: {Math.round(game.cpm)} CPM</p>
+      <p className="mt-4">
+        Characters per minute: {Math.round(game.cpm)} / {game.limit} CPM
+      </p>
+      <div className="h-5 w-full bg-neutral-200 flex justify-center flex-col">
+        <div
+          className="h-2"
+          style={{
+            width: `${(80 * game.cpm) / game.limit}%`,
+            backgroundColor: `${game.cpm / game.limit > 1 ? "coral" : "green"}`,
+          }}
+        ></div>
+      </div>
       {game.isFinished ? (
         <>
           <p>
             Averaged {game.cpm.toFixed(2)} CPM on a {game.limit} CPM auto-typo{" "}
-            {game.limit ? "(with 100% cheat cheat!)" : ""}
+            {game.cheat ? "(with 100% accuracy cheat!)" : ""}
           </p>
           <p>Press &quot;Tab&quot; + &quot;Enter&quot; to play again.</p>
         </>
