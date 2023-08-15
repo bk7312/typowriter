@@ -33,6 +33,20 @@ export default function Home() {
     if (typedRef.current) typedRef.current.focus();
   }, []);
 
+  useEffect(() => {
+    const updateCpm = setInterval(() => {
+      if (game.isTyping && !game.isFinished) {
+        const end = Date.now()
+        setGame(prev => ({
+          ...prev,
+          end: end,
+          cpm: (60 * 1000 * typed.length) / (end - game.start)
+        }))
+      }
+    }, 300)
+    return () => clearInterval(updateCpm)
+  }, [game, typed]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setGame((prev) => ({
@@ -83,9 +97,9 @@ export default function Home() {
         val.slice(-5) === game.text.slice(val.length - 5, val.length) &&
         !val.slice(-3).includes(" ")
       ) {
-        if (cpm > 1.5 * game.limit) {
+        if (cpm > 1.25 * game.limit) {
           val = val.slice(0, -1) + randomChar(mixedChars);
-        } else if (cpm > 1.2 * game.limit) {
+        } else if (cpm > 1.1 * game.limit) {
           val = val.slice(0, -1) + randomChar(lowerChars);
         } else {
           val = val.slice(0, -2) + val.at(-1) + val.at(-2);
@@ -142,8 +156,10 @@ export default function Home() {
         <div
           className="h-2"
           style={{
-            width: `${(80 * game.cpm) / game.limit}%`,
-            backgroundColor: `${game.cpm / game.limit > 1 ? "coral" : "green"}`,
+            width: `${Math.min(100, (80 * game.cpm) / game.limit)}%`,
+            transition: "width 0.3s linear", 
+            backgroundColor: `${game.cpm / game.limit < 1 ? "green" : "coral"}`,
+            animation: `${game.cpm / game.limit > 1.25 ? "limited 1s ease-in-out infinite" : "none"}`
           }}
         ></div>
       </div>
@@ -171,17 +187,6 @@ export default function Home() {
         onChange={(e) => handleChangeTyped(e)}
         ref={typedRef}
       />
-      <label htmlFor="cheat" className="flex gap-2 items-center">
-        <input
-          type="checkbox"
-          name="cheat"
-          id="cheat"
-          checked={game.cheat}
-          onChange={(e) => handleChange(e)}
-          ref={cheatRef}
-        />
-        Enable 100% accuracy cheat
-      </label>
       <label htmlFor="limit" className="flex gap-2 items-center">
         Auto-typo at:
         <input
@@ -195,8 +200,19 @@ export default function Home() {
         />
         CPM
       </label>
+      <label htmlFor="cheat" className="flex gap-2 items-center">
+        <input
+          type="checkbox"
+          name="cheat"
+          id="cheat"
+          checked={game.cheat}
+          onChange={(e) => handleChange(e)}
+          ref={cheatRef}
+        />
+        Enable 100% accuracy cheat
+      </label>
       <button
-        className="border px-4 py-2 rounded bg-blue-400"
+        className="border px-4 py-2 rounded bg-blue-300"
         name="reset"
         onClick={() => resetGame()}
       >

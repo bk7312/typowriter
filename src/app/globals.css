@@ -25,3 +25,16 @@ body {
     )
     rgb(var(--background-start-rgb));
 } */
+
+@keyframes limited {
+  0% {
+    background-color: coral;
+  }
+  50% {
+    transform: scaleY(1.5);
+    background-color: red;
+  }
+  100% {
+    background-color: coral;
+  }
+}
